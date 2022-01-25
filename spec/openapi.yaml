@@ -42,9 +42,12 @@ paths:
                     type: string
                     example: "1.1.0"
                     description: "Firmware on Prusa-Link version"
+                  original:
+                    type: string
+                    example: "PrusaLink I3MK3S"
                   text:
                     type: string
-                    example: "Prusa SLA SL1 1.0.5"
+                    example: "OctoPrint 1.1.0"
                   hostname:
                     type: string
                     example: "prusa-sl1"
@@ -55,6 +58,7 @@ paths:
                   sdk:
                     type: string
                     example: "0.2.0"
+                  # platform dependent
                   python:
                     type: array
                     items:
@@ -69,6 +73,7 @@ paths:
                         path:
                           type: string
                           example: "/usr/lib/python3/dist-packages"
+                  # platform dependent
                   system:
                     type: object
                     properties:
@@ -112,30 +117,35 @@ paths:
             schema:
               type: object
               properties:
+                # platform dependent
                 command:
                   type: string
                   default: connect
+                # platform dependent
                 baudrate:
                   type: integer
                   default: 115200
+                # platform dependent
                 port:
                   type: string
                   default: VIRTUAL
+                # platform dependent
                 printerProfile:
                   type: string
                   default: _default
+                # platform dependent
                 connect:
                   type: object
                   properties:
                     hostname:
                       type: string
-                      example: "dev.connect.prusa"
+                      example: "connect.prusa3d.com"
                     port:
                       type: integer
-                      default: 8080
+                      default: 0
                     tls:
-                      type: boolean
-                      default: false
+                      type: integer
+                      default: 1
       responses:
         # Return 200 only, if connect is filled
         200:
@@ -154,7 +164,7 @@ paths:
         403:
           $ref: "#/components/responses/Unauthorized"
 
-
+  # platform dependent
   /api/printerprofiles:
     get:
       summary: Retrive a mock of octoprinter printer profile
@@ -198,6 +208,7 @@ paths:
                     $ref: "#/components/schemas/PrinterState"
                   telemetry:
                     oneOf:
+                      - $ref: "#/components/schemas/TelemetryMK3"
                       - $ref: "#/components/schemas/TelemetryMini"
                       - $ref: "#/components/schemas/TelemetrySL1"
         403:
@@ -384,6 +395,8 @@ paths:
           $ref: "#/components/responses/BadRequest"
         409:
           $ref: "#/components/responses/Conflict"
+  # MK3
+  # - not supporting this endpoint
 
   # MINI
   # - will probably not support this endpoint.
@@ -482,10 +495,16 @@ paths:
       responses:
         200:
           description: OK
-          content: application/json
+          content:
+            application/json:
+              schema:
+                type: object
         400:
           description: BAD REQUEST
-          content: application/json
+          content:
+            application/json:
+              schema:
+                type: object
         403:
           $ref: "#/components/responses/Unauthorized"
 
@@ -496,10 +515,16 @@ paths:
       responses:
         200:
           description: OK
-          content: application/json
+          content:
+            application/json:
+              schema:
+                type: object
         400:
           description: BAD REQUEST
-          content: application/json
+          content:
+            application/json:
+              schema:
+                type: object
         403:
           $ref: "#/components/responses/Unauthorized"
 
@@ -510,10 +535,16 @@ paths:
       responses:
         200:
           description: OK
-          content: application/json
+          content:
+            application/json:
+              schema:
+                type: object
         400:
           description: BAD REQUEST
-          content: application/json
+          content:
+            application/json:
+              schema:
+                type: object
         403:
           $ref: "#/components/responses/Unauthorized"
 
@@ -592,6 +623,8 @@ paths:
                         type: string
                       location:
                         type: string
+                      farm_mode:
+                        type: boolean
     post:
       summary: Sets new printer and/or user settings and writes it to ini file
       requestBody:
@@ -729,6 +762,9 @@ paths:
               schema:
                 type: object
                 properties:
+                  type:
+                    type: string
+                    example: "FROM_WEB"
                   url:
                     type: string
                     example: "https://www.prusaprinters.org/castle.gcode"
@@ -736,6 +772,9 @@ paths:
                     type: string
                     example: "local"
                   destination:
+                    type: string
+                    example: "/Prusa Link gcodes/castle.gcode"
+                  path:
                     type: string
                     example: "/Prusa Link gcodes/castle.gcode"
                   size:
@@ -1105,16 +1144,19 @@ components:
       properties:
           hostname:
             type: string
-            example: "dev.connect.prusa"
+            example: "connect.prusa3d.com"
           port:
             type: integer
-            default: 8080
+            default: 0
           tls:
             type: boolean
-            default: false
-          registrated:
-            type: boolean
-            example: true
+            default: true
+          registration:
+            type: string
+            example: "IN_PROGRESS"
+          code:
+            type: string
+            example: "3Y2K12SQ42"
 
     ConnStates:
       type: object
@@ -1247,6 +1289,7 @@ components:
           type: number
           description: Target temperature
           nullable: true
+        # platform dependent
         offset:
           type: number
           nullable: true
@@ -1254,6 +1297,7 @@ components:
       example:
         actual: 22.5
         target: 50.0
+        # platform dependent
         offset: 1.0
 
     TemperatureState:
@@ -1263,6 +1307,7 @@ components:
           $ref: "#/components/schemas/TemperatureData"
         bed:
           $ref: "#/components/schemas/TemperatureData"
+        # platform dependent
         chamber:
           $ref: "#/components/schemas/TemperatureData"
 
@@ -1308,6 +1353,13 @@ components:
             closedOrError:
               type: boolean
               example: false
+            finished:
+              type: boolean
+              example: true
+            prepared:
+              type: boolean
+              example: true
+            # platform dependent
             busy:
               type: boolean
               example: false
@@ -1322,9 +1374,21 @@ components:
           type: integer
           description: Estimated print time for the file in seconds.
           nullable: true
+        averagePrintTime:
+          type: integer
+          description: Average print time for the file in seconds
+          nullable: true
+        lastPrintTime:
+          type: integer
+          description: Last print time for the file in seconds
+          nullable: true
+        filament:
+          type: string
+          description: Job filament type
+          nullable: true
         file:
           oneOf:
-            #$ref: "#/components/schemas/JobFileFDM"
+            - $ref: "#/components/schemas/JobFileFDM"
             - $ref: "#/components/schemas/JobFileSLA"
           type: object
           properties:
@@ -1351,6 +1415,13 @@ components:
               description: The size of the file in bytes.
               example: 873151
               nullable: true
+            # platform dependent
+            display:
+              type: string
+              description: The name of the file without path
+              example: "harry_potter_hogwarts_anthony_mohimont.sl1"
+              nullable: true
+            # platform dependent
             refs:
               type: object
               properties:
@@ -1359,9 +1430,13 @@ components:
                 thumbnailBig:
                   type: string
                   nullable: true
+        user:
+          type: string
+          example: "_api"
 
     Progress:
       oneOf:
+        - $ref: "#/components/schemas/ProgressMK3"
         - $ref: "#/components/schemas/ProgressMini"
         - $ref: "#/components/schemas/ProgressSL1"
       type: object
@@ -1386,6 +1461,26 @@ components:
           description: Estimate of time left to print in seconds.
           nullable: true
           example: 30495
+
+    ProgressMK3:
+      type: object
+      properties:
+        pos_z_mm:
+          type: number
+        printSpeed:
+          type: integer
+        flow_factor:
+          type: integer
+        completion:
+          type: number
+        filepos:
+          type: integer
+        printTime:
+          type: integer
+        printTimeLeft:
+          type: integer
+        printTimeLeftOrigin:
+          type: string
 
     ProgressMini:
       type: object
@@ -1564,6 +1659,7 @@ components:
               - $ref: "#/components/schemas/FullFolderInfo"
         free:
           type: integer
+        # platform dependent
         total:
           type: integer
 
@@ -1670,6 +1766,26 @@ components:
       ]
       example: "Operational"
 
+    TelemetryMK3:
+      type: object
+      properties:
+        temp_bed:
+          type: number
+        temp_nozzle:
+          type: number
+        material:
+          type: string
+        z-height:
+          type: number
+        print-speed:
+          type: integer
+        axis_x:
+          type: number
+        axis_y:
+          type: number
+        axis_z:
+          type: number
+
     TelemetryMini:
       type: object
       properties:
@@ -1705,7 +1821,28 @@ components:
           type: number
           example: 52.6
 
-    #JobFileFDM:
+    JobFileFDM:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "Skeleton.gcode"
+        path:
+          type: string
+          example: "/Prusa Link gcodes/Skeleton.gcode"
+        size:
+          type: integer
+          example: 404942
+        origin:
+          type: string
+          example: "local"
+        date:
+          type: integer
+          example: 1533095642
+        display:
+          type: string
+          example: "Skeleton.gcode"
+
 
     JobFileSLA:
       type: object
